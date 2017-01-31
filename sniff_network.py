@@ -26,12 +26,13 @@ def parseInfo(writer):
 
         # TCP
         if pkt[IP].proto == TCP_val and pkt[TCP].flags == SYN:
-            info = [pkt[IP].dst, pkt[IP].proto]
             try:
-                time = pkt[TCP].options[2]
+                epoch_time = pkt.time
+                time = datetime.datetime.fromtimestamp(epoch_time).strftime('%c')
             except:
                 time = 0
-            writer.writerow([pkt[IP].dst, pkt[IP].proto, time])
+            info = [pkt[IP].dst, pkt[IP].proto, time]
+            writer.writerow(info)
             RECENT_IPS.appendleft(info)
             df = queueToDataframe()
             show_unique_addresses(df)
@@ -40,14 +41,12 @@ def parseInfo(writer):
 def queueToDataframe():
     q_to_list = list(RECENT_IPS)
     df = pandas.DataFrame(q_to_list)
-    df.columns = ['dest_ip', 'proto']
+    df.columns = ['dest_ip', 'proto', 'time']
     return df
 
 def show_unique_addresses(df):
     output_file = 'recent_ips.html'
-    ip = df['dest_ip']
-    proto = df['proto']
-    context = {'ips': df['dest_ip'], 'proto':df['proto']}
+    context = {'ips': df['dest_ip'], 'proto':df['proto'], 'time':df['time']}
 
     with open(output_file, 'w') as f:
         html = render_template('ip_temp.html', context)

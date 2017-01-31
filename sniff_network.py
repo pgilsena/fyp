@@ -17,19 +17,24 @@ TEMPLATE_ENVIRONMENT = jinja2.Environment(
     autoescape=False,
     loader=jinja2.FileSystemLoader(os.path.join(PATH, 'templates')),
     trim_blocks=False)
-WRITER = None
 
 def parseInfo(writer):
     def subFunction(pkt):
-        info = [pkt[IP].dst, pkt[IP].proto]
-        try:
-            time = pkt[TCP].options[2]
-        except:
-            time = 0
-        writer.writerow([pkt[IP].dst, pkt[IP].proto, time])
-        RECENT_IPS.appendleft(info)
-        df = queueToDataframe()
-        show_unique_addresses(df)
+        SYN = 0x02
+        TCP_val = 6
+        UDP_val = 17
+
+        # TCP
+        if pkt[IP].proto == TCP_val and pkt[TCP].flags == SYN:
+            info = [pkt[IP].dst, pkt[IP].proto]
+            try:
+                time = pkt[TCP].options[2]
+            except:
+                time = 0
+            writer.writerow([pkt[IP].dst, pkt[IP].proto, time])
+            RECENT_IPS.appendleft(info)
+            df = queueToDataframe()
+            show_unique_addresses(df)
     return subFunction
 
 def queueToDataframe():
@@ -54,7 +59,7 @@ def render_template(template_filename, context):
 def main():
     with open('ips.csv', 'a') as f:
         writer = csv.writer(f)
-        sniff(filter="tcp and ip", prn=parseInfo(writer)) # (and dst port ####), iface="wlp7s0"
+        sniff(filter="ip", prn=parseInfo(writer)) # (and dst port ####), iface="wlp7s0"
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,6 @@
 from collections import namedtuple
 import datetime
+from geoip import geolite2
 import logging
 import MySQLdb
 from netfilterqueue import NetfilterQueue
@@ -17,7 +18,7 @@ def get_conn_details(pkt):
     scapy_pkt = IP(pkt.get_payload())
 
     # extract the src address/port and dest address/port of the new connection
-    c=namedtuple('pkt',['src', 'sport', 'dst', 'dport', 'dns_query', 'dns_ans','timestmp', 'tcp_flag'])
+    c=namedtuple('pkt',['src', 'sport', 'dst', 'dport', 'dns_query', 'dns_ans','timestmp', 'tcp_flag', 'scountry', 'dcountry'])
     c.src = scapy_pkt[IP].src
     c.dst = scapy_pkt[IP].dst
     if (scapy_pkt.haslayer(TCP)):
@@ -43,8 +44,13 @@ def get_conn_details(pkt):
                     c.dns_ans = ans.rdata
                     break  # we use the first one
 
+    # get timestamp
     epoch_time = scapy_pkt.time
     c.timestmp = datetime.datetime.fromtimestamp(epoch_time) #.strftime('%c')
+
+    # get countries
+    c.scountry = geolite2.lookup(c.src)
+    c.dcountry = geolite2.lookup(c.dest)
 
     # unique id for this connection.  can be split on the spaces to recover the connectiond details
     # we check with src and dest flipped to lump forward and reverse
@@ -81,9 +87,9 @@ def pkt_received(pkt):
 
 
 def add_to_db(pkt_info, status, pkt_count):
-    sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`)"
-           "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d')" \
-            % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count))
+    sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`)"
+           "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s')" \
+            % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.s_country, pkt_info.dcountry))
 
     try:
         cursor.execute(sql)

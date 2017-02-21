@@ -49,10 +49,19 @@ def get_conn_details(pkt):
     c.timestmp = datetime.datetime.fromtimestamp(epoch_time) #.strftime('%c')
 
     # get countries
-    c.scountry = geolite2.lookup(c.src)
-    c.dcountry = geolite2.lookup(c.dest)
+    slocation = geolite2.lookup(c.src)
+    if slocation is not None:
+        c.scountry = slocation.country
+    else:
+        c.scountry = "NULL"
 
-    # unique id for this connection.  can be split on the spaces to recover the connectiond details
+    dlocation = geolite2.lookup(c.dst)
+    if dlocation is not None: #print geolite2.lookup(c.dst)
+        c.dcountry = dlocation.country
+    else:
+        c.dcountry = 'NULL'
+
+    # unique id for this connection.  can be split on the spaces to recover the connection details
     # we check with src and dest flipped to lump forward and reverse
     # directions together
     conn_id_rev = c.proto+' '+c.dst+' '+str(c.dport)+' '+c.src+' '+str(c.sport)
@@ -80,7 +89,7 @@ def pkt_received(pkt):
         add_to_db(pkt_info, 'new', 0)
 
     # Check if end of TCP connection
-    if pkt_info.proto == "TCP" and (pkt_info.tcp_flag == RST or pkt_info.tcp_flag == FIN):
+    if pkt_info.proto == 'TCP' and (pkt_info.tcp_flag == RST or pkt_info.tcp_flag == FIN):
         add_to_db(pkt_info, 'closed', conns[c_id][2])
 
     pkt.accept()
@@ -89,7 +98,7 @@ def pkt_received(pkt):
 def add_to_db(pkt_info, status, pkt_count):
     sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`)"
            "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s')" \
-            % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.s_country, pkt_info.dcountry))
+            % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.scountry, pkt_info.dcountry))
 
     try:
         cursor.execute(sql)

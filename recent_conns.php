@@ -16,15 +16,15 @@
 <body>
 
 	<?php
-	$conn = mysqli_connect('localhost','pippa','','packets')
+	$conn = mysqli_connect('localhost','pippa','p1i2p3p4a5','packets')
 	or die('Error connecting to MySQL server.');
 
-	$sql = "SELECT proto, srcIP, destIP, conn_status, timestmp, sport, dport, pkt_count, dns_query FROM packet_info ORDER BY timestmp DESC LIMIT 20";
+	$sql = "SELECT proto, srcIP, destIP, conn_status, timestmp, sport, dport, pkt_count, dns_query, s_country, d_country FROM packet_info ORDER BY timestmp DESC LIMIT 20";
 	$result = mysqli_query($conn, $sql);
 
 	echo "<div class='w3-container'>
         	<div class='page-header'>
-            <h1>20 Most Recent IP Destinations</h1>
+            <h1>20 Latest Connections <small>New or Closed</small></h1>
         	</div>
         <br>";
 
@@ -39,6 +39,8 @@
 	        <th>DNS Query</th>
 	        <th>Conn Status</th>
 	        <th>Packet Count</th>
+	        <th>Src Country</th>
+	        <th>Dest Country</th>
 	        </tr>";
 
 	    $counter = 1;
@@ -52,6 +54,8 @@
 		    echo "<td>" . $rowitem['dns_query'] . "</td>";
 		    echo "<td>" . $rowitem['conn_status'] . "</td>";
 		    echo "<td>" . $rowitem['pkt_count'] . "</td>";
+		    echo "<td>" . $rowitem['s_country'] . "</td>";
+		    echo "<td>" . $rowitem['d_country'] . "</td>";
 		    echo "</tr>";
 		    $counter = $counter + 1;
 		}

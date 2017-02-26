@@ -15,9 +15,12 @@ dns={}
 db_conn = None
 
 def get_conn_details(pkt):
+    SYN = 0x02
+    FIN = 0x01
+    RST = 0x04
     scapy_pkt = IP(pkt.get_payload())
 
-    # extract the src address/port and dest address/port of the new connection
+    # extract the src address/port and dest address/port of the new connectiontc
     c=namedtuple('pkt',['src', 'sport', 'dst', 'dport', 'dns_query', 'dns_ans','timestmp', 'tcp_flag', 'scountry', 'dcountry'])
     c.src = scapy_pkt[IP].src
     c.dst = scapy_pkt[IP].dst
@@ -25,7 +28,11 @@ def get_conn_details(pkt):
         c.proto = 'TCP'
         c.sport = scapy_pkt[TCP].sport
         c.dport = scapy_pkt[TCP].dport
-        c.tcp_flag = scapy_pkt[TCP].flags
+
+        if scapy_pkt[TCP].flags == SYN: c.tcp_flag = 'SYN'
+        elif scapy_pkt[TCP].flags == FIN: c.tcp_flag = 'FIN'
+        elif scapy_pkt[TCP].flags == RST: c.tcp_flag = 'RST'
+        else: c.tcp_flag = scapy_pkt[TCP].flags
     elif (scapy_pkt.haslayer(UDP)):
         c.proto = 'UDP'
         c.sport = scapy_pkt[UDP].sport
@@ -81,6 +88,7 @@ def pkt_received(pkt):
     # Check if packet has already been logged in conns
     if c_id in conns:
         conns[c_id][2] += 1 # increase pkt counter for connection
+        update_pkt_count(pkt_info, conns[c_id][2])
 
     # Add new connection to conns and database
     # Note: not checking for SYN value, as connection is new
@@ -96,18 +104,39 @@ def pkt_received(pkt):
 
 
 def add_to_db(pkt_info, status, pkt_count):
-    sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`)"
-           "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s')" \
-            % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.scountry, pkt_info.dcountry))
+    if pkt_info.proto == "TCP":
+        sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`, `tcp_flag`)"
+               "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s', '%s')" \
+                % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.scountry, pkt_info.dcountry, pkt_info.tcp_flag))
+
+    else:
+        sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`)"
+               "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s')" \
+                % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.scountry, pkt_info.dcountry))
 
     try:
         cursor.execute(sql)
         db_conn.commit()
-    except:
-        print "Error in inserting into database"
+    except MySQLdb.Error, e:
+        try:
+            print "MySQL Error [%d]: %s" % (e.args[0], e.args[1])
+            print pkt_info.timestmp
+        except IndexError:
+            print "MySQL Error: %s" % str(e)
         db_conn.rollback()
 
 
+def update_pkt_count(pkt_info, pkt_count):
+    sql = ("UPDATE packet_info SET pkt_count = '%s' WHERE srcIP='%s' AND sport='%s' AND destIP='%s' AND dport='%s' ORDER BY `timestmp` DESC LIMIT 1" % (pkt_count,pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport))
+    try:
+        cursor.execute(sql)
+        db_conn.commit()
+    except MySQLdb.Error, e:
+        try:
+            print "MySQL Error [%d]: %s" % (e.args[0], e.args[1])
+        except IndexError:
+            print "MySQL Error: %s" % str(e)
+        db_conn.rollback()
 
 
 # Connect to database

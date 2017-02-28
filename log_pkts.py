@@ -13,8 +13,13 @@ conns={}
 # and dictionary to store DNS lookups make (in case of interest)
 dns={}
 db_conn = None
+# timer used to check UDP packets every 10 mins
+TIMER = datetime.datetime.now()
 
 def get_conn_details(pkt):
+    SYN = 0x02
+    FIN = 0x01
+    RST = 0x04
     scapy_pkt = IP(pkt.get_payload())
 
     # extract the src address/port and dest address/port of the new connection
@@ -25,7 +30,11 @@ def get_conn_details(pkt):
         c.proto = 'TCP'
         c.sport = scapy_pkt[TCP].sport
         c.dport = scapy_pkt[TCP].dport
-        c.tcp_flag = scapy_pkt[TCP].flags
+
+        if scapy_pkt[TCP].flags == SYN: c.tcp_flag = 'SYN'
+        elif scapy_pkt[TCP].flags == FIN: c.tcp_flag = 'FIN'
+        elif scapy_pkt[TCP].flags == RST: c.tcp_flag = 'RST'
+        else: c.tcp_flag = scapy_pkt[TCP].flags
     elif (scapy_pkt.haslayer(UDP)):
         c.proto = 'UDP'
         c.sport = scapy_pkt[UDP].sport
@@ -72,42 +81,102 @@ def get_conn_details(pkt):
 
 
 def pkt_received(pkt):
-    SYN = 0x02
-    FIN = 0x01
-    RST = 0x04
+    global TIMER
 
     (c_id, pkt_info) = get_conn_details(pkt)
 
     # Check if packet has already been logged in conns
     if c_id in conns:
         conns[c_id][2] += 1 # increase pkt counter for connection
+        update_pkt_count(pkt_info, conns[c_id][2])
 
     # Add new connection to conns and database
-    # Note: not checking for SYN value, as connection is new
     else:
         conns[c_id] = [time.time(),'open',0]
         add_to_db(pkt_info, 'new', 0)
 
     # Check if end of TCP connection
-    if pkt_info.proto == 'TCP' and (pkt_info.tcp_flag == RST or pkt_info.tcp_flag == FIN):
+    if pkt_info.proto == 'TCP' and pkt_info.tcp_flag == 'RST' or pkt_info.tcp_flag == 'FIN':
         add_to_db(pkt_info, 'closed', conns[c_id][2])
+        del(conns[c_id])
+
+    # Check for old UDP connection
+    if TIMER < (datetime.datetime.now() - datetime.timedelta(minutes = 12)):
+        print "12 mins has passed since %s" % TIMER.strftime('%c')
+        TIMER = datetime.datetime.now() # resets timer to current time
+        check_old_UDP()
 
     pkt.accept()
 
 
 def add_to_db(pkt_info, status, pkt_count):
-    sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`)"
-           "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s')" \
-            % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.scountry, pkt_info.dcountry))
+    if pkt_info.proto == "TCP":
+        sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`, `tcp_flag`)"
+               "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s', '%s')" \
+                % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.scountry, pkt_info.dcountry, pkt_info.tcp_flag))
+
+    else:
+        sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`)"
+               "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s')" \
+                % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.scountry, pkt_info.dcountry))
 
     try:
         cursor.execute(sql)
         db_conn.commit()
-    except:
-        print "Error in inserting into database"
+        print "Logged %s packet with status %s" % (pkt_info.proto, status)
+    except MySQLdb.Error, e:
+        print "MySQL Error: %s" % str(e)
         db_conn.rollback()
 
 
+def update_pkt_count(pkt_info, pkt_count):
+    sql = ("UPDATE packet_info SET pkt_count = '%s' WHERE srcIP='%s' AND sport='%s' AND destIP='%s' AND dport='%s'" % (pkt_count, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport))
+
+    try:
+        cursor.execute(sql)
+        db_conn.commit()
+    except MySQLdb.Error, e:
+        print "MySQL Error: %s" % str(e)
+        db_conn.rollback()
+
+
+def check_old_UDP():
+    delete_list = [] # list to remove old UDP's from conns
+
+    for idx in conns:
+        if 'UDP' in idx:
+            idx_time = datetime.datetime.fromtimestamp(conns[idx][0])
+            time_plus = idx_time + datetime.timedelta(minutes = 10)
+            if time_plus < datetime.datetime.now(): # checks if UDP connection was added to conns over 10 mins ago
+                string = idx.split()
+                pkt_info=namedtuple('pkt',['src', 'sport', 'dst', 'dport', 'dns_query', 'tcp_flag','timestmp', 'pkt_count', 'scountry', 'dcountry'])
+                pkt_info.proto = string[0]
+                pkt_info.src = string[1]
+                pkt_info.sport = string[2]
+                pkt_info.dst = string[3]
+                pkt_info.dport = string[4]
+                epoch_time = conns[idx][0]
+                pkt_info.timestmp = idx_time #conns[idx][0]
+                pkt_info.dns_query = '' # TODO
+                pkt_info.pkt_count = conns[idx][2]
+
+                slocation = geolite2.lookup(pkt_info.src)
+                if slocation is not None:
+                    pkt_info.scountry = slocation.country
+
+                dlocation = geolite2.lookup(pkt_info.dst)
+                if dlocation is not None:
+                    pkt_info.dcountry = dlocation.country
+
+                delete_list.append(idx)
+                try:
+                    add_to_db(pkt_info, 'closed', conns[idx][2])
+                except:
+                    print "issue with logging old UDP"
+
+    # remove old connections from conns
+    for idx in delete_list:
+        del(conns[idx])
 
 
 # Connect to database

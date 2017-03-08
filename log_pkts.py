@@ -42,15 +42,20 @@ def get_conn_details(pkt):
 
     c.dns_query=''
     c.dns_ans=''
-    if (scapy_pkt.haslayer(DNS)):
+
+    if c.dst in dns:
+        c.dns_query = dns[c.dst]
+
+    elif (scapy_pkt.haslayer(DNS)):
         c.dns_query = scapy_pkt[DNS].qd.qname
         if (scapy_pkt[DNS].ancount > 0):
            # we have a DNS answer in this packet
             for i in range(scapy_pkt[DNS].ancount):
                 ans = scapy_pkt[DNSRR][i]
-                #print ans.type, ans.rdata
+
                 if ans.type==1 or ans.type==28: # 1 is A, 28 is AAAA
                     c.dns_ans = ans.rdata
+                    dns[c.dns_ans] = c.dns_query
                     break  # we use the first one
 
     # get timestamp
@@ -70,7 +75,7 @@ def get_conn_details(pkt):
     else:
         c.dcountry = 'NULL'
 
-    # unique id for this connection.  can be split on the spaces to recover the connection details
+    # unique id for this connection. can be split on the spaces to recover the connection details
     # we check with src and dest flipped to lump forward and reverse
     # directions together
     conn_id_rev = c.proto+' '+c.dst+' '+str(c.dport)+' '+c.src+' '+str(c.sport)
@@ -101,8 +106,8 @@ def pkt_received(pkt):
         del(conns[c_id])
 
     # Check for old UDP connection
-    if TIMER < (datetime.datetime.now() - datetime.timedelta(minutes = 12)):
-        print "12 mins has passed since %s" % TIMER.strftime('%c')
+    if TIMER < (datetime.datetime.now() - datetime.timedelta(minutes = 10)):
+        print "10 mins has passed since %s" % TIMER.strftime('%c')
         TIMER = datetime.datetime.now() # resets timer to current time
         check_old_UDP()
 

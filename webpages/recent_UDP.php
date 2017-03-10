@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Packet Info</title>
+	<title>UDP Info</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
 	<!-- Latest compiled and minified CSS -->
@@ -16,15 +16,15 @@
 <body>
 
 	<?php
-	$conn = mysqli_connect('localhost','pippa','p1i2p3p4a5','packets')
+	$conn = mysqli_connect('localhost','pippa','','packets')
 	or die('Error connecting to MySQL server.');
 
-	$sql = "SELECT proto, srcIP, destIP, conn_status, timestmp, sport, dport, pkt_count, dns_query, s_country, d_country, tcp_flag FROM packet_info ORDER BY timestmp DESC LIMIT 50";
+	$sql = "SELECT * FROM packet_info WHERE proto='UDP' ORDER BY timestmp DESC LIMIT 100";
 	$result = mysqli_query($conn, $sql);
 
 	echo "<div class='w3-container'>
         	<div class='page-header'>
-            <h1>20 Latest Connections <small>New or Closed</small></h1>
+            <h1>100 Latest UDP Connections <small>New or Closed</small></h1>
         	</div>
         <br>";
 

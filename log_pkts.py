@@ -43,6 +43,7 @@ def get_conn_details(pkt):
     c.dns_query=''
     c.dns_ans=''
 
+    # check if DNS has already been resolved for IP
     if c.dst in dns:
         c.dns_query = dns[c.dst]
 
@@ -70,17 +71,11 @@ def get_conn_details(pkt):
         c.scountry = "NULL"
 
     dlocation = geolite2.lookup(c.dst)
-    if dlocation is not None: #print geolite2.lookup(c.dst)
+    if dlocation is not None:
         c.dcountry = dlocation.country
     else:
         c.dcountry = 'NULL'
 
-    # unique id for this connection. can be split on the spaces to recover the connection details
-    # we check with src and dest flipped to lump forward and reverse
-    # directions together
-    conn_id_rev = c.proto+' '+c.dst+' '+str(c.dport)+' '+c.src+' '+str(c.sport)
-    if (conn_id_rev in conns):
-        return (conn_id_rev, c)
     conn_id = c.proto+' '+c.src+' '+str(c.sport)+' '+c.dst+' '+str(c.dport)
     return (conn_id, c)
 
@@ -119,7 +114,6 @@ def add_to_db(pkt_info, status, pkt_count):
         sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`, `tcp_flag`)"
                "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s', '%s')" \
                 % (pkt_info.proto, pkt_info.src, pkt_info.sport, pkt_info.dst, pkt_info.dport, status, pkt_info.dns_query, pkt_info.timestmp, pkt_count, pkt_info.scountry, pkt_info.dcountry, pkt_info.tcp_flag))
-
     else:
         sql = ("INSERT INTO packet_info (`id`,`proto`, `srcIP`, `sport`, `destIP`, `dport`, `conn_status`, `dns_query`,`timestmp`, `pkt_count`, `s_country`, `d_country`)"
                "VALUES (NULL, '%s','%s','%s','%s','%s','%s','%s','%s', '%d', '%s', '%s')" \
@@ -162,8 +156,11 @@ def check_old_UDP():
                 pkt_info.dport = string[4]
                 epoch_time = conns[idx][0]
                 pkt_info.timestmp = idx_time #conns[idx][0]
-                pkt_info.dns_query = '' # TODO
                 pkt_info.pkt_count = conns[idx][2]
+
+                pkt_info.dns_query = ''
+                if pkt_info.dst in dns:
+                    pkt_info.dns_query = dns[pkt_info.dst]
 
                 slocation = geolite2.lookup(pkt_info.src)
                 if slocation is not None:

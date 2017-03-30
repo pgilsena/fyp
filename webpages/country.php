@@ -10,6 +10,8 @@
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
 	<!-- Latest compiled and minified JavaScript -->
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+  	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+  	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 	<!--script type="text/javascript" src="csvtotable.js" id="data"></script-->
 </head>
 
@@ -38,61 +40,64 @@
   			</ul>
 		</div>";
 
-	if (mysqli_num_rows($dst_result) > 0) {
-		echo "<div class='container'>
-				<h3>Top Destination Countries</h3>
-				<div class='table-responsive'>
-	        		<table class='table table-striped'>
-			        	<thead>
-					        <tr>
-					        	<th>#</th>
-					        	<th>Country</th>
-						        <th>Count</th>
-					        </tr>
-			        	</thead>";
+	echo "<div class='container'>
+	    <ul class='nav nav-pills'>
+	        <li class='active'><a data-toggle='pill' href='#dest'>Destination</a></li>
+	        <li><a data-toggle='pill' href='#src'>Source</a></li>
+	    </ul>
 
-	    $counter = 1;
- 		while($rowitem = mysqli_fetch_array($dst_result)) {
-		    echo "<tr>";
-		    echo "<td>" . $counter . "</td>";
-		    echo "<td>" . $rowitem['d_country'] . "</td>";
-		    echo "<td>" . $rowitem['Total'] . "</td>";
-		    echo "</tr>";
-		    $counter = $counter + 1;
-		}
-		echo "</table></div></div>";
-	} else {
-		echo "0 results";
-	}
+	    <div class='tab-content'>
+	        <div id='dest' class='tab-pane fade in active'>";
+	            if (mysqli_num_rows($dst_result) > 0) {
+	                echo "<h3>Top Destination Countries</h3>
+	                <div class='table-responsive'>
+	                    <table class='table table-striped'>
+	                        <thead>
+	                            <tr>
+	                                <th>#</th>
+	                                <th>Country</th>
+	                                <th>Count</th>
+	                            </tr>
+	                        </thead>";
 
-	echo "<br>";
+	                        $counter = 1;
+	                        while($rowitem = mysqli_fetch_array($dst_result)) {
+	                            echo "<tr>";
+	                            echo "<td>" . $counter . "</td>";
+	                            echo "<td>" . $rowitem['d_country'] . "</td>";
+	                            echo "<td>" . $rowitem['Total'] . "</td>";
+	                            echo "</tr>";
+	                            $counter = $counter + 1;
+	                        }
+	                    echo "</table></div>";
+	            }
+	        echo "</div>";
 
-	if (mysqli_num_rows($src_result) > 0) {
-		echo "<div class='container'>
-				<h3>Top Source Countries</h3>
-				<div class='table-responsive'>
-	        		<table class='table table-striped'>
-			        	<thead>
-					        <tr>
-					        	<th>#</th>
-					        	<th>Country</th>
-						        <th>Count</th>
-					        </tr>
-			        	</thead>";
+	        echo "<div id='src' class='tab-pane fade'>";
+	            if (mysqli_num_rows($src_result) > 0) {
+	                echo "<h3>Top Source Countries</h3>
+	                    <div class='table-responsive'>
+	                        <table class='table table-striped'>
+	                            <thead>
+	                                <tr>
+	                                    <th>#</th>
+	                                    <th>Country</th>
+	                                    <th>Count</th>
+	                                </tr>
+	                            </thead>";
 
-	    $counter = 1;
- 		while($rowitem = mysqli_fetch_array($src_result)) {
-		    echo "<tr>";
-		    echo "<td>" . $counter . "</td>";
-		    echo "<td>" . $rowitem['s_country'] . "</td>";
-		    echo "<td>" . $rowitem['Total'] . "</td>";
-		    echo "</tr>";
-		    $counter = $counter + 1;
-		}
-		echo "</table></div></div>";
-	} else {
-		echo "0 results";
-	}
+		                    $counter = 1;
+		                    while($rowitem = mysqli_fetch_array($src_result)) {
+		                        echo "<tr>";
+		                        echo "<td>" . $counter . "</td>";
+		                        echo "<td>" . $rowitem['s_country'] . "</td>";
+		                        echo "<td>" . $rowitem['Total'] . "</td>";
+		                        echo "</tr>";
+		                        $counter = $counter + 1;
+		                    }
+	                echo "</table></div>";
+	            }
+			echo  "</div></div></div>";
 
 	echo "<div class='container'>
 			<ul class='pager'>

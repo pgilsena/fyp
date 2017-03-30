@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Index</title>
+	<title>Home</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
 	<!-- Latest compiled and minified CSS -->
@@ -14,17 +14,31 @@
 </head>
 
 <body>
-	<div class='w3-container'>
+	<div class='container'>
     	<div class='page-header'>
-        	<h1>Index of Sites</h1>
+        	<h1>Index of Pages</h1>
     	</div>
     </div>
-    <div class="w3-container">
-    	<h3><a href="http://34.249.128.106/recent_conns.php">Most Recent Connections</a></h3>
-		<br>
-		<h3><a href="http://34.249.128.106/recent_TCP.php">Most Recent TCP Connections</a></h3>
-		<br>
-		<h3><a href="http://34.249.128.106/recent_UDP.php">Most Recent UDP Connections</a></h3>
+
+    <div class="container">
+    	<ul class="list-group">
+	    	<li class="list-group-item"><a href="http://34.249.128.106/latest.php">Latest Packets</a></li>
+	    	<li class="list-group-item"><a href="http://34.249.128.106/tcp.php">Latest TCP Packets</a></li>
+	    	<li class="list-group-item"><a href="http://34.249.128.106/udp.php">Latest UDP Packets</a></li>
+	    	<li class="list-group-item"><a href="http://34.249.128.106/country.php">Packet Count: Countries</a></li>
+	    	<li class="list-group-item"><a href="http://34.249.128.106/dns.php">Packet Count: DNS Queries</a></li>
+	    	<li class="list-group-item"><a href="http://34.249.128.106/trackers.php">Latest Tracker Packets</a></li>
+	    	<li class="list-group-item"><a href="http://34.249.128.106/sources.php">Top Packet Sources</a></li>
+	    	<li class="list-group-item"><a href="http://34.249.128.106/destinations.php">Top Packet Destinations</a></li>
+    	</ul>
+    </div>
+	<br><br>
+
+	<div class="container">
+		<ul class="pager">
+			<li class='previous'><a href='http://34.249.128.106/destinations.php'>Top Packet Destinations</a></li>
+		    <li class="next"><a href="http://34.249.128.106/latest.php">Latest Packets</a></li>
+  		</ul>
 	</div>
 </body>
 </html>

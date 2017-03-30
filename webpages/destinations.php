@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Trackers</title>
+	<title>Destinations</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
 	<!-- Latest compiled and minified CSS -->
@@ -19,66 +19,53 @@
 	$conn = mysqli_connect('localhost','pippa','','packets')
 	or die('Error connecting to MySQL server.');
 
-
-	$tkr_query = "SELECT packet_info.srcIP, packet_info.destIP, packet_info.timestmp, packet_info.dns_query, packet_info.proto, packet_info.s_country, packet_info.d_country FROM packet_info WHERE packet_info.timestmp > '2017-01-01' AND EXISTS (SELECT tkr_ips.ip FROM tkr_ips WHERE tkr_ips.ip LIKE CONCAT(packet_info.srcIP, '%') OR tkr_ips.ip LIKE CONCAT(packet_info.destIP, '%')) ORDER BY packet_info.timestmp DESC LIMIT 100";
-
-	$tkr_result = mysqli_query($conn, $tkr_query);
+	$src = "SELECT destIP, count(1) as Total from packet_info GROUP BY destIP order by Total desc LIMIT 100";
+	$src_result = mysqli_query($conn, $src);
 
 	echo "<div class='container'>
         	<div class='page-header'>
-            	<h1>Trackers</h1>
+            	<h1>Uplink</h1>
         	</div>
-        	<div class='alert alert-danger' role='alert'>Note: this page takes around 50 seconds to load</div>
         </div>";
 
     echo "<div class='container'>
 			<ul class='pager'>
-				<li class='previous'><a href='http://34.249.128.106/dns.php'>Top DNS</a></li>
-		    	<li class='next'><a href='http://34.249.128.106/sources.php'>Top Packet Sources</a></li>
+				<li class='previous'><a href='http://34.249.128.106/sources.php'>Top Packet Sources</a></li>
+		    	<li class='next'><a href='http://34.249.128.106/'>Home</a></li>
   			</ul>
 		</div>";
 
-	if (mysqli_num_rows($tkr_result) > 0) {
+	if (mysqli_num_rows($src_result) > 0) {
 		echo "<div class='container'>
 				<div class='table-responsive'>
 	        		<table class='table table-striped'>
 			        	<thead>
 					        <tr>
 					        	<th>#</th>
-					        	<th>Time</th>
-					        	<th>Protocol</th>
-					        	<th>Source IP</th>
-					        	<th>Dest IP</th>
-					        	<th>DNS</th>
-					        	<th>Dest Country</th>
-					        	<th>Src Country</th>
+					        	<th>Destination</th>
+					        	<th>Count</th>
 					        </tr>
 			        	</thead>";
 
-        $counter = 1;
+		$counter = 1;
 
-        while($rowitem = mysqli_fetch_array($tkr_result)) {
+ 		while($rowitem = mysqli_fetch_array($src_result)) {
 		    echo "<tr>";
 			    echo "<td>" . $counter . "</td>";
-			    echo "<td>" . $rowitem['timestmp'] . "</td>";
-			    echo "<td>" . $rowitem['proto'] . "</td>";
-			    echo "<td>" . $rowitem['srcIP'] . "</td>";
 			    echo "<td>" . $rowitem['destIP'] . "</td>";
-			    echo "<td>" . $rowitem['dns_query'] . "</td>";
-			    echo "<td>" . $rowitem['d_country'] . "</td>";
-			    echo "<td>" . $rowitem['s_country'] . "</td>";
-			echo "</tr>";
-			$counter = $counter + 1;
+			    echo "<td>" . $rowitem['Total'] . "</td>";
+		    echo "</tr>";
+		    $counter = $counter + 1;
 		}
 		echo "</table></div></div>";
 	} else {
-		echo "0 tracker results";
+		echo "0 results";
 	}
 
 	echo "<div class='container'>
 			<ul class='pager'>
-				<li class='previous'><a href='http://34.249.128.106/dns.php'>Top DNS</a></li>
-		    	<li class='next'><a href='http://34.249.128.106/sources.php'>Top Packet Sources</a></li>
+				<li class='previous'><a href='http://34.249.128.106/sources.php'>Top Packet Sources</a></li>
+		    	<li class='next'><a href='http://34.249.128.106/'>Home</a></li>
   			</ul>
 		</div>";
 
